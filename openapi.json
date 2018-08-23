@@ -1,0 +1,475 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Red Green Alarm",
+        "description": "HTTP service for managing your recipes",
+        "version": ""
+    },
+    "host": "localhost:8080",
+    "paths": {
+        "/color": {
+            "get": {
+                "tags": [
+                    "color"
+                ],
+                "summary": "color color",
+                "description": "get current color",
+                "operationId": "color#color",
+                "responses": {
+                    "200": {
+                        "description": "OK response.",
+                        "schema": {
+                            "$ref": "#/definitions/ColorResponseBody",
+                            "required": [
+                                "color"
+                            ]
+                        }
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            },
+            "post": {
+                "tags": [
+                    "color"
+                ],
+                "summary": "update color",
+                "description": "Set color",
+                "operationId": "color#update",
+                "parameters": [
+                    {
+                        "name": "UpdateRequestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ColorUpdateRequestBody",
+                            "required": [
+                                "color"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content response."
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            }
+        },
+        "/favicon.ico": {
+            "get": {
+                "summary": "Download static/favicon.ico",
+                "operationId": "home#/favicon.ico",
+                "responses": {
+                    "200": {
+                        "description": "File downloaded",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            }
+        },
+        "/home": {
+            "get": {
+                "summary": "Download static/index.html",
+                "operationId": "home#/home",
+                "responses": {
+                    "200": {
+                        "description": "File downloaded",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            }
+        },
+        "/schedule": {
+            "get": {
+                "tags": [
+                    "schedule"
+                ],
+                "summary": "list schedule",
+                "description": "List all stored bottles",
+                "operationId": "schedule#list",
+                "responses": {
+                    "200": {
+                        "description": "OK response.",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/ScheduleResponseBody"
+                            }
+                        }
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            },
+            "post": {
+                "tags": [
+                    "schedule"
+                ],
+                "summary": "create schedule",
+                "description": "create new cron schedule",
+                "operationId": "schedule#create",
+                "parameters": [
+                    {
+                        "name": "CreateRequestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ScheduleCreateRequestBody",
+                            "required": [
+                                "name",
+                                "cron",
+                                "color",
+                                "next",
+                                "id"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created response.",
+                        "schema": {
+                            "$ref": "#/definitions/CreateResponseBody",
+                            "required": [
+                                "id",
+                                "color",
+                                "cron"
+                            ]
+                        }
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            }
+        },
+        "/schedule/{id}": {
+            "delete": {
+                "tags": [
+                    "schedule"
+                ],
+                "summary": "remove schedule",
+                "description": "Remove cron schedule",
+                "operationId": "schedule#remove",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content response."
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            }
+        },
+        "/static/{*filename}}": {
+            "get": {
+                "summary": "Download static/",
+                "operationId": "home#/static/{*filename}",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Relative file path",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File downloaded",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "File not found",
+                        "schema": {
+                            "$ref": "#/definitions/error"
+                        }
+                    }
+                },
+                "schemes": [
+                    "http"
+                ]
+            }
+        }
+    },
+    "definitions": {
+        "ColorResponseBody": {
+            "title": "ColorResponseBody",
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "description": "color to set",
+                    "example": "red",
+                    "enum": [
+                        "red",
+                        "yellow",
+                        "green",
+                        "off"
+                    ]
+                }
+            },
+            "example": {
+                "color": "off"
+            },
+            "required": [
+                "color"
+            ]
+        },
+        "ColorUpdateRequestBody": {
+            "title": "ColorUpdateRequestBody",
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "description": "color to set",
+                    "example": "green",
+                    "enum": [
+                        "red",
+                        "yellow",
+                        "green",
+                        "off"
+                    ]
+                }
+            },
+            "example": {
+                "color": "yellow"
+            },
+            "required": [
+                "color"
+            ]
+        },
+        "CreateResponseBody": {
+            "title": "CreateResponseBody",
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "description": "color to set",
+                    "example": "red",
+                    "enum": [
+                        "red",
+                        "yellow",
+                        "green",
+                        "off"
+                    ]
+                },
+                "cron": {
+                    "type": "string",
+                    "description": "Valid cron string",
+                    "example": "30 6 * * 1-5"
+                },
+                "id": {
+                    "type": "string",
+                    "description": "ID is the unique id of the schedule.",
+                    "example": "schedule_21345"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Descriptive Name",
+                    "default": "",
+                    "example": "Week Days at 6:30am",
+                    "maxLength": 100
+                },
+                "next": {
+                    "type": "string",
+                    "description": "next time",
+                    "default": "",
+                    "example": ""
+                }
+            },
+            "example": {
+                "color": "yellow",
+                "cron": "30 6 * * 1-5",
+                "id": "schedule_21345",
+                "name": "Week Days at 6:30am",
+                "next": ""
+            },
+            "required": [
+                "id",
+                "color",
+                "cron"
+            ]
+        },
+        "ScheduleCreateRequestBody": {
+            "title": "ScheduleCreateRequestBody",
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "description": "color to set",
+                    "example": "green",
+                    "enum": [
+                        "red",
+                        "yellow",
+                        "green",
+                        "off"
+                    ]
+                },
+                "cron": {
+                    "type": "string",
+                    "description": "Valid cron string",
+                    "example": "30 6 * * 1-5"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Descriptive Name",
+                    "default": "",
+                    "example": "Week Days at 6:30am",
+                    "maxLength": 100
+                },
+                "next": {
+                    "type": "string",
+                    "description": "next time",
+                    "default": "",
+                    "example": ""
+                }
+            },
+            "example": {
+                "color": "yellow",
+                "cron": "30 6 * * 1-5",
+                "name": "Week Days at 6:30am",
+                "next": ""
+            },
+            "required": [
+                "name",
+                "cron",
+                "color",
+                "next",
+                "id"
+            ]
+        },
+        "ScheduleResponseBody": {
+            "title": "ScheduleResponseBody",
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "description": "color to set",
+                    "example": "green",
+                    "enum": [
+                        "red",
+                        "yellow",
+                        "green",
+                        "off"
+                    ]
+                },
+                "cron": {
+                    "type": "string",
+                    "description": "Valid cron string",
+                    "example": "30 6 * * 1-5"
+                },
+                "id": {
+                    "type": "string",
+                    "description": "ID is the unique id of the schedule.",
+                    "example": "schedule_21345"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Descriptive Name",
+                    "default": "",
+                    "example": "Week Days at 6:30am",
+                    "maxLength": 100
+                },
+                "next": {
+                    "type": "string",
+                    "description": "next time",
+                    "default": "",
+                    "example": ""
+                }
+            },
+            "description": "Schedule describes a cron schedule.",
+            "example": {
+                "color": "green",
+                "cron": "30 6 * * 1-5",
+                "id": "schedule_21345",
+                "name": "Week Days at 6:30am",
+                "next": ""
+            },
+            "required": [
+                "id",
+                "color",
+                "cron"
+            ]
+        },
+        "error": {
+            "title": "Mediatype identifier: application/vnd.goa.error; view=default",
+            "type": "object",
+            "properties": {
+                "fault": {
+                    "type": "boolean",
+                    "description": "Is the error a server-side fault?",
+                    "example": false
+                },
+                "id": {
+                    "type": "string",
+                    "description": "ID is a unique identifier for this particular occurrence of the problem.",
+                    "example": "123abc"
+                },
+                "message": {
+                    "type": "string",
+                    "description": "Message is a human-readable explanation specific to this occurrence of the problem.",
+                    "example": "parameter 'p' must be an integer"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Name is the name of this class of errors.",
+                    "example": "bad_request"
+                },
+                "temporary": {
+                    "type": "boolean",
+                    "description": "Is the error temporary?",
+                    "example": true
+                },
+                "timeout": {
+                    "type": "boolean",
+                    "description": "Is the error a timeout?",
+                    "example": false
+                }
+            },
+            "description": "Error response result type (default view)",
+            "example": {
+                "fault": false,
+                "id": "123abc",
+                "message": "parameter 'p' must be an integer",
+                "name": "bad_request",
+                "temporary": true,
+                "timeout": false
+            },
+            "required": [
+                "name",
+                "id",
+                "message",
+                "temporary",
+                "timeout",
+                "fault"
+            ]
+        }
+    }
+}
