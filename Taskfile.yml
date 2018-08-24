@@ -1,0 +1,14 @@
+version: '2'
+# https://github.com/go-task/task
+tasks:
+  build:
+    cmds:
+     - go build
+  test:
+    cmds:
+     - go build
+     - ./curl openapi.json /color get
+  example:
+    desc: "generate examples"
+    cmds: 
+      - goa example github.com/jaredwarren/rg/design

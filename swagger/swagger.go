@@ -15,31 +15,68 @@ type Swagger struct {
 	Definitions map[string]Definition `json:"definitions"`
 }
 
-// // UnmarshalJSON ...
+// UnmarshalJSON ...
 // func (s *Swagger) UnmarshalJSON(data []byte) error {
 // 	var b map[string]interface{}
-// 	// fmt.Println(string(data))
 // 	if err := json.Unmarshal(data, &b); err != nil {
 // 		return err
 // 	}
-// 	// *p = make(map[string]Method)
+
+// 	// fmt.Printf("%+v\n", b)
+// 	s = &Swagger{
+// 		Version: b["swagger"].(string),
+// 		Info: Info{
+// 			Title:       b["info"].(map[string]interface{})["title"].(string),
+// 			Description: b["info"].(map[string]interface{})["description"].(string),
+// 			Version:     b["info"].(map[string]interface{})["version"].(string),
+// 		},
+// 		Host:  b["host"].(string),
+// 		Paths: Paths{},
+// 		// Definitions: b["definitions"].(map[string]Definition),
+// 	}
+
+// 	for k, p := range b["paths"].(map[string]interface{}) {
+// 		m := map[string]*Method{}
+// 		s.Paths[k] = Path{
+// 			Path:    k,
+// 			Host:    s.Host,
+// 			Methods: &m,
+// 		}
+// 	}
+
+// 	// *p = make(map[string]Path)
 // 	// for k, v := range b {
-// 	// 	m := Method{
-// 	// 		Tags:        v.Tags,
-// 	// 		Summary:     v.Summary,
-// 	// 		Description: v.Description,
-// 	// 		OperationID: v.OperationID,
-// 	// 		Parameters:  v.Parameters,
-// 	// 		Responses:   v.Responses,
-// 	// 		Schemes:     v.Schemes,
-// 	// 		Operation:   strings.ToUpper(k),
+// 	// 	m := Path{
+// 	// 		Path:    k,
+// 	// 		Methods: v.Methods,
+// 	// 	}
+// 	// 	for _, mm := range *m.Methods {
+// 	// 		mm.Path = k
 // 	// 	}
 // 	// 	(*p)[k] = m
 // 	// }
-// 	fmt.Printf("%+v\n", b["paths"])
-// 	panic("")
 // 	return nil
 // }
+
+// ToCurl convert method to curl string
+func (s Swagger) ToCurl() []string {
+	curls := []string{}
+	for _, path := range s.Paths {
+		curls = append(curls, path.ToCurl(s.Host)...)
+	}
+
+	return curls
+}
+
+// FindPath convert method to curl string
+func (s Swagger) FindPath(path string) *Path {
+	for p, pInfo := range s.Paths {
+		if p == path {
+			return &pInfo
+		}
+	}
+	return nil
+}
 
 // Paths ...
 type Paths map[string]Path
@@ -52,8 +89,6 @@ func (p *Paths) UnmarshalJSON(data []byte) error {
 	}
 	*p = make(map[string]Path)
 	for k, v := range b {
-		// fmt.Println(k)
-
 		m := Path{
 			Path:    k,
 			Methods: v.Methods,
@@ -61,17 +96,12 @@ func (p *Paths) UnmarshalJSON(data []byte) error {
 		for _, mm := range *m.Methods {
 			mm.Path = k
 		}
-		fmt.Println(m.Methods)
-		// fmt.Printf(" -> %+v\n", *m.Methods)
 		(*p)[k] = m
 	}
 	return nil
 }
 
 // Path ...
-// type Path map[string]Method
-
-// Path ... TODO: need marshal method
 type Path struct {
 	Path    string
 	Methods *map[string]*Method
@@ -107,9 +137,23 @@ func (p *Path) UnmarshalJSON(data []byte) error {
 }
 
 // ToCurl convert method to curl string
-func (p Path) ToCurl() (string, error) {
-	// fmt.Println(p)
-	return "", nil
+func (p Path) ToCurl(host string) []string {
+	curls := []string{}
+	for _, method := range *p.Methods {
+		curls = append(curls, method.ToCurl(host))
+	}
+
+	return curls
+}
+
+// FindMethod convert method to curl string
+func (p Path) FindMethod(method string) *Method {
+	for m, mInfo := range *p.Methods {
+		if m == method {
+			return mInfo
+		}
+	}
+	return nil
 }
 
 // Info ...
@@ -128,23 +172,20 @@ type Method struct {
 	Parameters  []Parameter         `json:"parameters,omitempty"`
 	Responses   map[string]Response `json:"responses"`
 	Schemes     []string            `json:"schemes"`
+	Host        string
 	Path        string
 	Operation   string
 }
 
 // ToCurl convert method to curl string
-func (m Method) ToCurl() (string, error) {
-	// fmt.Printf(" -> %s -> %s -> %+v\n", p, m, mInfo)
-	// output curl
-
-	fmt.Printf("\n\n---ToCurl()----\n%+v\n-------\n", m)
-
-	// url
-	// TODO: figure out how to set this. (schema for http?)
+// TODO: add data and/or args
+func (m Method) ToCurl(host string) string {
 	schema := "http"
-	domain := "localhost"
-	port := ":8080"
-	url := fmt.Sprintf("%s://%s%s%s", schema, domain, port, m.Path)
+	// default to first schema
+	if len(m.Schemes) > 0 {
+		schema = m.Schemes[0]
+	}
+	url := fmt.Sprintf("%s://%s%s", schema, host, m.Path)
 
 	// check if there are params
 	data := ""
@@ -153,7 +194,8 @@ func (m Method) ToCurl() (string, error) {
 curl -L --header "Content-Type: application/json" \
 -- request %s \
 %s%s
-					`, strings.ToUpper(m.Operation), data, url), nil
+`,
+		m.Operation, data, url)
 }
 
 // Parameter ...
@@ -162,10 +204,13 @@ type Parameter struct {
 	In       string `json:"in"`
 	Required bool   `json:"required"`
 	Type     string `json:"type,omitempty"`
-	// Schema   struct {
-	// 	Ref      string   `json:"$ref,omitempty"`
-	// 	Required []string `json:"required,omitempty"`
-	// } `json:"schema,omitempty"`
+	Schema   Schema `json:"schema,omitempty"`
+}
+
+// Schema ...
+type Schema struct {
+	Ref      string   `json:"$ref,omitempty"`
+	Required []string `json:"required,omitempty"`
 }
 
 // Response ...
