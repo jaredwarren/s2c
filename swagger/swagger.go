@@ -15,49 +15,6 @@ type Swagger struct {
 	Definitions map[string]Definition `json:"definitions"`
 }
 
-// UnmarshalJSON ...
-// func (s *Swagger) UnmarshalJSON(data []byte) error {
-// 	var b map[string]interface{}
-// 	if err := json.Unmarshal(data, &b); err != nil {
-// 		return err
-// 	}
-
-// 	// fmt.Printf("%+v\n", b)
-// 	s = &Swagger{
-// 		Version: b["swagger"].(string),
-// 		Info: Info{
-// 			Title:       b["info"].(map[string]interface{})["title"].(string),
-// 			Description: b["info"].(map[string]interface{})["description"].(string),
-// 			Version:     b["info"].(map[string]interface{})["version"].(string),
-// 		},
-// 		Host:  b["host"].(string),
-// 		Paths: Paths{},
-// 		// Definitions: b["definitions"].(map[string]Definition),
-// 	}
-
-// 	for k, p := range b["paths"].(map[string]interface{}) {
-// 		m := map[string]*Method{}
-// 		s.Paths[k] = Path{
-// 			Path:    k,
-// 			Host:    s.Host,
-// 			Methods: &m,
-// 		}
-// 	}
-
-// 	// *p = make(map[string]Path)
-// 	// for k, v := range b {
-// 	// 	m := Path{
-// 	// 		Path:    k,
-// 	// 		Methods: v.Methods,
-// 	// 	}
-// 	// 	for _, mm := range *m.Methods {
-// 	// 		mm.Path = k
-// 	// 	}
-// 	// 	(*p)[k] = m
-// 	// }
-// 	return nil
-// }
-
 // ToCurl convert method to curl string
 func (s Swagger) ToCurl() []string {
 	curls := []string{}
@@ -114,10 +71,8 @@ func (p *Path) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// ms := map[string]Method{}
 	p.Methods = &map[string]*Method{}
 	for k, v := range b {
-		// fmt.Println("  - ", k)
 		m := &Method{
 			Tags:        v.Tags,
 			Summary:     v.Summary,
@@ -129,10 +84,7 @@ func (p *Path) UnmarshalJSON(data []byte) error {
 			Operation:   strings.ToUpper(k),
 		}
 		(*p.Methods)[k] = m
-		// ms[k] = m
 	}
-	// p.Methods = &ms
-	// fmt.Printf("%+v\n", p.Methods)
 	return nil
 }
 
@@ -178,7 +130,6 @@ type Method struct {
 }
 
 // ToCurl convert method to curl string
-// TODO: add data and/or args
 func (m Method) ToCurl(host string) string {
 	schema := "http"
 	// default to first schema
@@ -189,6 +140,7 @@ func (m Method) ToCurl(host string) string {
 
 	// check if there are params
 	data := ""
+	header := "\\"
 
 	reqParms := map[string]string{}
 	for _, pars := range m.Parameters {
@@ -197,20 +149,32 @@ func (m Method) ToCurl(host string) string {
 		}
 	}
 	if len(reqParms) > 0 {
+		// TODO: add option to use form data
 		b, err := json.Marshal(reqParms)
 		if err != nil {
 			fmt.Println("error:", err)
 		}
-		fmt.Println(string(b))
 		data = fmt.Sprintf("--data '%s' \\\n", b)
+		header = "--header \"Content-Type: application/json\" \\"
 	}
 
 	return fmt.Sprintf(`
-curl -L --header "Content-Type: application/json" \
--- request %s \
+curl -L %s
+--request %s \
 %s%s
 `,
-		m.Operation, data, url)
+		header, m.Operation, data, url)
+}
+
+// GetRequiredParams convert method to curl string
+func (m Method) GetRequiredParams() (params []string) {
+	params = []string{}
+	for _, pars := range m.Parameters {
+		for _, par := range pars.Schema.Required {
+			params = append(params, par)
+		}
+	}
+	return
 }
 
 // Parameter ...
@@ -245,36 +209,49 @@ type Definition struct {
 	Required   []string               `json:"required"`
 }
 
-// SwagToCurl ...
-func SwagToCurl(sw Swagger, path, method string) (err error) {
-	// 	for p, pInfo := range sw.Paths {
-	// 		if path == "" || p == path {
-	// 			for m, mInfo := range pInfo {
-	// 				if method == "" || m == method {
-	// 					fmt.Printf(" -> %s -> %s -> %+v\n", p, m, mInfo)
-	// 					// output curl
+// UnmarshalSwagger manually unmarshal swagger json.. not complete
+// If I want to be able to get the path and host information in a method.
+// I'll have unmarshal the json manually.
+// func (s *Swagger) UnmarshalJSON(data []byte) error {
+func UnmarshalSwagger(s *Swagger, data []byte) error {
+	var b map[string]interface{}
+	if err := json.Unmarshal(data, &b); err != nil {
+		return err
+	}
 
-	// 					// url
-	// 					// TODO: figure out how to set this. (schema for http?)
-	// 					schema := "http"
-	// 					domain := "localhost"
-	// 					port := ":8080"
-	// 					url := fmt.Sprintf("%s://%s%s%s", schema, domain, port, p)
+	// fmt.Printf("%+v\n", b)
+	s = &Swagger{
+		Version: b["swagger"].(string),
+		Info: Info{
+			Title:       b["info"].(map[string]interface{})["title"].(string),
+			Description: b["info"].(map[string]interface{})["description"].(string),
+			Version:     b["info"].(map[string]interface{})["version"].(string),
+		},
+		Host:  b["host"].(string),
+		Paths: Paths{},
+		// Definitions: b["definitions"].(map[string]Definition),
+	}
 
-	// 					// check if there are params
-	// 					data := ""
+	for k, p := range b["paths"].(map[string]interface{}) {
+		fmt.Println(p)
+		m := map[string]*Method{}
+		s.Paths[k] = Path{
+			Path: k,
+			// Host:    s.Host,
+			Methods: &m,
+		}
+	}
 
-	// 					fmt.Printf(`
-	// curl -L --header "Content-Type: application/json" \
-	// -- request %s \
-	// %s%s
-	// 					`, m, data, url)
-	// 				}
-	// 			}
-
-	// 		}
+	// *p = make(map[string]Path)
+	// for k, v := range b {
+	// 	m := Path{
+	// 		Path:    k,
+	// 		Methods: v.Methods,
 	// 	}
-
-	// TODO: run through Paths and generate curl
-	return
+	// 	for _, mm := range *m.Methods {
+	// 		mm.Path = k
+	// 	}
+	// 	(*p)[k] = m
+	// }
+	return nil
 }

@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	var List bool
 	var rootCmd = &cobra.Command{
 		Use: "file [path] [method]",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -45,29 +46,61 @@ func main() {
 				return err
 			}
 
-			if path != "" {
-				p := sw.FindPath(path)
-				if p == nil {
-					fmt.Printf("path \"%s\" not found\n", path)
-				} else {
-					if method != "" {
-						m := p.FindMethod(method)
-						if m == nil {
-							fmt.Printf("method \"%s\" not found\n", method)
-						} else {
-							fmt.Println(m.ToCurl(sw.Host))
-						}
+			if List {
+				if path != "" {
+					p := sw.FindPath(path)
+					if p == nil {
+						fmt.Printf("path \"%s\" not found\n", path)
 					} else {
-						fmt.Println(p.ToCurl(sw.Host))
+						fmt.Printf("  %s\n", path)
+						for _, mInfo := range *p.Methods {
+							fmt.Printf("    %s\n", mInfo.Operation)
+							params := mInfo.GetRequiredParams()
+							if len(params) > 0 {
+								fmt.Printf("      %v\n", mInfo.GetRequiredParams())
+							}
+						}
+					}
+				} else {
+					// print paths and methods
+					for p, pInfo := range sw.Paths {
+						fmt.Printf("  %s\n", p)
+						for m, mInfo := range *pInfo.Methods {
+							fmt.Printf("    %s\n", m)
+							params := mInfo.GetRequiredParams()
+							if len(params) > 0 {
+								fmt.Printf("      %v\n", mInfo.GetRequiredParams())
+							}
+						}
 					}
 				}
 			} else {
-				fmt.Println(sw.ToCurl())
+				if path != "" {
+					p := sw.FindPath(path)
+					if p == nil {
+						fmt.Printf("path \"%s\" not found\n", path)
+					} else {
+						if method != "" {
+							m := p.FindMethod(method)
+							if m == nil {
+								fmt.Printf("method \"%s\" not found\n", method)
+							} else {
+								fmt.Println(m.ToCurl(sw.Host))
+							}
+						} else {
+							fmt.Println(p.ToCurl(sw.Host))
+						}
+					}
+				} else {
+					fmt.Println(sw.ToCurl())
+				}
 			}
 
 			return
 		},
 	}
+
+	rootCmd.Flags().BoolVarP(&List, "list", "l", false, "list paths and methods")
 
 	rootCmd.Execute()
 }
