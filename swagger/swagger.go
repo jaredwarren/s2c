@@ -190,6 +190,21 @@ func (m Method) ToCurl(host string) string {
 	// check if there are params
 	data := ""
 
+	reqParms := map[string]string{}
+	for _, pars := range m.Parameters {
+		for _, par := range pars.Schema.Required {
+			reqParms[par] = fmt.Sprintf("{{.%s}}", par)
+		}
+	}
+	if len(reqParms) > 0 {
+		b, err := json.Marshal(reqParms)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+		fmt.Println(string(b))
+		data = fmt.Sprintf("--data '%s' \\\n", b)
+	}
+
 	return fmt.Sprintf(`
 curl -L --header "Content-Type: application/json" \
 -- request %s \
